@@ -11,14 +11,13 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.message.ElectLeadersRequestData.TopicPartitions;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ConsumerDemo {
+public class ConsumerDemoAssignSeek {
 	public static void main(String[] args) {
-		Logger logger=LoggerFactory.getLogger(ConsumerDemo.class.getName());
+		Logger logger=LoggerFactory.getLogger(ConsumerDemoAssignSeek.class.getName());
 		
 		String BOOT_STRAP_SERVER="127.0.0.1:9092";
 		String groupId="my-fourth-application";
@@ -64,5 +63,31 @@ public class ConsumerDemo {
 						"Offsets:"+record.offset());
 			}
 		}		
-	}	
+	}
+	public static void testAssign(String topic, KafkaConsumer<String, String> consumer,
+			Collection<TopicPartition> partitions) {
+		
+		//We start by asking the cluster for the partitions available in the topic. 
+		//In case if we want to consume a specific partition, we can skip this part.
+		List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic);
+		if (partitionInfos != null) {
+			for (PartitionInfo partition : partitionInfos)
+				partitions.add(new TopicPartition(partition.topic(), partition.partition()));
+			
+			//Once we know which partitions we want, we call assign() with the list.
+			consumer.assign(partitions);
+
+			while (true) {
+				ConsumerRecords<String, String> records = consumer.poll(1000);
+
+				for (ConsumerRecord<String, String> record : records) {
+					System.out.println("Key:" + record.key() + "\n" + 
+										"Value:" + record.value() + "\n" + 
+										"Partition:"+ record.partition() + "\n" + 
+										"Offsets:" + record.offset());
+				}
+				consumer.commitSync();
+			}
+		}
+	}
 }
